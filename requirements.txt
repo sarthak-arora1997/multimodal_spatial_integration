@@ -1,0 +1,14 @@
+spatialdata[extra]==0.4.0
+scanpy==1.11.2
+scikit-misc==0.5.1
+squidpy==1.6.5
+harmonypy==0.0.10
+geosketch==1.3
+igraph==0.11.8
+pandas
+numpy
+h5py
+anndata
+matplotlib
+spatialdata-io
+spatialdata-plots
