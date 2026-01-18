@@ -1,14 +1,38 @@
-spatialdata[extra]==0.4.0
+# ------------------------------
+# Core scientific stack
+# ------------------------------
+numpy>=1.23,<2.1
+scipy>=1.10,<1.13
+pandas>=1.5,<2.2
+scikit-learn>=1.2,<1.5
+numba>=0.57,<0.61
+
+# ------------------------------
+# AnnData / scverse core
+# ------------------------------
+anndata>=0.9,<0.11
 scanpy==1.11.2
-scikit-misc==0.5.1
+
+# ------------------------------
+# Spatial ecosystem (Xenium)
+# ------------------------------
+spatialdata[extra]==0.4.0
 squidpy==1.6.5
+scikit-misc==0.5.1
+
+# ------------------------------
+# Graphs, integration, sampling
+# ------------------------------
+igraph==0.11.8
 harmonypy==0.0.10
 geosketch==1.3
-igraph==0.11.8
-pandas
-numpy
-h5py
-anndata
-matplotlib
-spatialdata-io
-spatialdata-plots
+
+# ------------------------------
+# Visualization & IO (pulled by extras, pinned for safety)
+# ------------------------------
+matplotlib>=3.7,<3.9
+seaborn>=0.12,<0.14
+zarr>=2.16,<3.0
+dask>=2023.5,<2025.0
+shapely>=2.0,<2.1
+pygeos>=0.14,<0.15; platform_system!="Windows"
