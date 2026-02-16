@@ -98,3 +98,35 @@ squidpy: 1.6.5
 anndata: 0.10.9
 
 This environment supports Xenium data ingestion via spatialdata-io, unified multimodal spatial containers (SpatialData), single-cell analysis (scanpy), spatial statistics (squidpy), and interoperability with 10x Genomics Xenium Explorer.
+
+## Fixing Xenium Parquet Compatibility (Polars → PyArrow)
+
+Newer Xenium instrument runs (April 2025+) output parquet files written by **Polars**, which use parquet format features that **pyarrow cannot decode**. This causes an `OSError: Unexpected end of stream` when loading data with `spatialdata_io.xenium()`. The files are not corrupted — they are simply incompatible with pyarrow's reader.
+
+**Affected files:** `cells.parquet`, `transcripts.parquet`
+
+### Fix
+
+Install Polars in your environment, then re-write the affected files as pyarrow-compatible parquet:
+
+```bash
+source ~/envs/xenium_scverse_py310/bin/activate
+pip install polars
+```
+
+```python
+import polars as pl
+import shutil
+from pathlib import Path
+
+raw_data_path = Path("data/xenium/raw/<your_xenium_output_folder>")
+
+for fname in ["cells.parquet", "transcripts.parquet"]:
+    f = raw_data_path / fname
+    df = pl.read_parquet(f)
+    df.to_pandas().to_parquet(f.with_suffix(".parquet.bak"))
+    shutil.move(f, f.with_suffix(".parquet.original"))  # preserve original
+    shutil.move(f.with_suffix(".parquet.bak"), f)        # replace with compatible version
+```
+
+The original Polars-written files are preserved with a `.original` extension. After conversion, `xenium(raw_data_path)` will load without errors.
