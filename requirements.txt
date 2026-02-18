@@ -36,3 +36,8 @@ zarr>=2.16,<3.0
 dask>=2023.5,<2025.0
 shapely>=2.0,<2.1
 pygeos>=0.14,<0.15; platform_system!="Windows"
+
+# ------------------------------
+# Image Registration
+# ------------------------------
+SimpleITK
