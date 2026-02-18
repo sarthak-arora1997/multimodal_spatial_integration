@@ -38,7 +38,7 @@ Extract matched channel pairs from both modalities for visual comparison and reg
 The DESI image is flipped along the x-axis to match Xenium orientation.
 
 ![DESI and Xenium channels visualized in napari](Channels_DESI_Xenium_Test.png)
-*Individual DESI mass spectrometry imaging channels (top row: PE/PS 734.60, PE/PS 731.65, Heme B 616.25, mz 204.13) and Xenium morphology channels (bottom row: DAPI, AlphaSMA/Vimentin, ATP1A1/CD45/E-Cadherin) visualized together in napari. Each channel is rendered with a distinct colormap to highlight tissue morphology across modalities.*
+*Individual DESI mass spectrometry imaging channels (top row from the left: Heme B 616.25, Xenium Morphology (AlphaSMA/Vimentin and ATP1A1/CD45/E-Cadherin), PE/PS 734.60. Bottom row from the left: m/z 204.13, PE/PS 731.65) visualized together in napari. Each channel is rendered with a distinct colormap to highlight tissue morphology across modalities.*
 
 ### 3. Composite Image Generation
 
