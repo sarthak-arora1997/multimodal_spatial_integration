@@ -11,7 +11,7 @@ This project implements a **landmark-based spatial registration pipeline** to al
 | Modality | Sample | Resolution | Channels |
 |----------|--------|-----------|----------|
 | **Xenium** | FFPE Human Tissue (55588 region 4) | 0.2125 um/pixel | DAPI, ATP1A1/CD45/E-Cadherin, 18S, AlphaSMA/Vimentin |
-| **DESI-MSI** | Same tissue section | 40 um/pixel | 88 m/z channels (4 selected: mz 204.13, Heme B 616.25, PE/PS 731.65, PE/PS 734.60) |
+| **DESI-MSI** | Consecutive tissue section | 40 um/pixel | 88 m/z channels (4 selected: mz 204.13, Heme B 616.25, PE/PS 731.65, PE/PS 734.60) |
 
 ### Notebooks
 
