@@ -48,11 +48,26 @@ RGB composite images are created for both modalities using matched biological fe
 
 ### 4. Landmark Selection
 
-Corresponding landmark points are placed on both images using QuPath and exported as TSV files. Landmarks are matched by point number, and pixel coordinates are converted to physical micron coordinates (Xenium x 0.2125, DESI x 40.0).
+Corresponding landmark points are placed on both images using QuPath and exported as TSV files. A total of 11 landmark pairs were selected across tissue boundaries, vessel structures, and other identifiable features to guide the affine registration.
 
-### 5. SimpleITK Registration Setup
+![Landmark points on Xenium morphology image](Xenium_Landmarks.png)
+*Landmark points placed on the Xenium morphology image (AlphaSMA/Vimentin in red, ATP1A1/CD45/E-Cadherin in green) using QuPath. Each colored circle marks a corresponding anatomical feature used for registration.*
 
-Both images are converted to SimpleITK format with correct physical spacing, and paired landmark coordinates are prepared for landmark-based affine registration.
+![Landmark points on DESI Heme B image](DESI_Landmarks.png)
+*Matching landmark points placed on the DESI Heme B (616.25 m/z) channel. Points are numbered to correspond with the Xenium landmarks above.*
+
+Landmarks are matched by point number extracted from the exported TSV files, and pixel coordinates are converted to physical micron coordinates (Xenium x 0.2125, DESI x 40.0) to establish a common physical coordinate system.
+
+### 5. Affine Registration with SimpleITK
+
+Both images are converted to SimpleITK format with correct physical spacing, and the paired landmark coordinates (flattened to `[x1, y1, x2, y2, ...]` format as required by SimpleITK) are used to compute a 2D affine transformation via `sitk.LandmarkBasedTransformInitializer`. The derived affine parameters include rotation, scale, and translation components.
+
+### 6. Image Resampling and Overlay
+
+The DESI image is resampled into the Xenium coordinate space using the computed affine transformation via `sitk.Resample`, producing a registered DESI image at Xenium resolution (0.2125 um/pixel). Per-landmark registration errors are computed as Euclidean distances between transformed moving landmarks and fixed landmarks.
+
+![Registered DESI image overlaid on Xenium](Registered_Image_Using_Landmarks.png)
+*Result of the landmark-based affine registration: the DESI Heme B channel (red) resampled and overlaid onto the Xenium AlphaSMA/Vimentin morphology channel (green) in the same coordinate space. The overlap of tissue boundaries confirms the spatial alignment between the two modalities.*
 
 ## Project Structure
 
