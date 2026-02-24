@@ -220,3 +220,48 @@ for fname in ["cells.parquet", "transcripts.parquet"]:
 ```
 
 The original Polars-written files are preserved with a `.original` extension. After conversion, `xenium(raw_data_path)` will load without errors.
+
+### SpatialData Write Fails with `TypeError: Object of type Scale is not JSON serializable`
+
+When calling `sdata.write()` on a `SpatialData` object that contains **Points** elements (e.g. transcripts), `spatialdata==0.4.0` raises the following error:
+
+```
+TypeError: Object of type Scale is not JSON serializable
+
+File spatialdata/_io/io_points.py, line 73, in write_points
+    points.to_parquet(path)
+```
+
+**Root cause:** Newer versions of `pyarrow` serialize the `.attrs` dictionary of a pandas/dask DataFrame when writing to parquet. The `points` DataFrame carries spatialdata transformation objects (e.g. `Scale`, `Affine`) in `.attrs["transform"]`, which are not JSON-serializable. Previously `pyarrow` silently ignored `.attrs`, but recent versions attempt to serialize them as parquet metadata, causing the failure.
+
+**Affected file:** `spatialdata/_io/io_points.py` (line 73 in `write_points()`)
+
+This bug is fixed upstream in [spatialdata PR #1003](https://github.com/scverse/spatialdata/pull/1003), but the fix is not included in the pinned `spatialdata==0.4.0` release used by this project.
+
+#### Fix
+
+Apply the patch manually to your installed `spatialdata` package:
+
+```bash
+# Find the file to patch
+SITE_PACKAGES=$(python -c "import spatialdata, os; print(os.path.dirname(spatialdata.__file__))")
+echo "Patching: $SITE_PACKAGES/_io/io_points.py"
+```
+
+Open `$SITE_PACKAGES/_io/io_points.py` and locate the `write_points()` function (around line 73). Replace:
+
+```python
+    points.to_parquet(path)
+```
+
+with:
+
+```python
+    points_without_transform = points.copy()
+    del points_without_transform.attrs["transform"]
+    points_without_transform.to_parquet(path)
+```
+
+This copies the DataFrame, removes the non-serializable `transform` key from the copy's `.attrs`, and writes the clean copy to parquet. The original `points` object (with transforms intact) is still used for the zarr metadata writes that follow.
+
+**Note:** This patch is applied directly to the installed package in `~/envs/xenium_scverse_py310/` and is **not tracked in git**. It will need to be re-applied if the environment is recreated.
