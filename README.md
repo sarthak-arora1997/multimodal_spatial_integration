@@ -15,8 +15,8 @@ This project implements a **landmark-based spatial registration pipeline** to al
 
 ### Notebooks
 
-- **`notebooks/Xenium_5k_data_analysis_journey_python.ipynb`** -- Single-cell spatial transcriptomics analysis pipeline (QC, clustering, spatial statistics) for lung and breast cancer Xenium datasets
-- **`notebooks/DESI_Xenium_Registration.ipynb`** -- Cross-modal registration of DESI and Xenium images (described below)
+- **`notebooks/Xenium_5k_data_analysis_journey_python.ipynb`**: Single-cell spatial transcriptomics analysis pipeline (QC, clustering, spatial statistics) for lung and breast cancer Xenium datasets
+- **`notebooks/DESI_Xenium_Registration.ipynb`**: Cross-modal registration of DESI and Xenium images (described below)
 
 ## DESI-Xenium Registration Workflow
 
@@ -37,7 +37,7 @@ Extract matched channel pairs from both modalities for visual comparison and reg
 
 The DESI image is flipped along the x-axis to match Xenium orientation.
 
-![DESI and Xenium channels visualized in napari](Channels_DESI_Xenium_Test.png)
+![DESI and Xenium channels visualized in napari](images/Channels_DESI_Xenium_Test.png)
 *Individual DESI mass spectrometry imaging channels (top row from the left: Heme B 616.25, Xenium Morphology (AlphaSMA/Vimentin and ATP1A1/CD45/E-Cadherin), PE/PS 734.60. Bottom row from the left: m/z 204.13, PE/PS 731.65) visualized together in napari. Each channel is rendered with a distinct colormap to highlight tissue morphology across modalities.*
 
 ### 3. Composite Image Generation
@@ -48,12 +48,12 @@ RGB composite images are created for both modalities using matched biological fe
 
 ### 4. Landmark Selection
 
-Corresponding landmark points are placed on both images using QuPath and exported as TSV files. A total of 11 landmark pairs were selected across tissue boundaries, vessel structures, and other identifiable features to guide the affine registration.
+Corresponding landmark points are placed on both images using QuPath and exported as TSV files. A total of 12 landmark pairs were selected across tissue boundaries, vessel structures, and other identifiable features to guide the affine registration.
 
-![Landmark points on Xenium morphology image](Xenium_Landmarks.png)
+![Landmark points on Xenium morphology image](images/Xenium_Landmarks.png)
 *Landmark points placed on the Xenium morphology image (AlphaSMA/Vimentin in red, ATP1A1/CD45/E-Cadherin in green) using QuPath. Each colored circle marks a corresponding anatomical feature used for registration.*
 
-![Landmark points on DESI Heme B image](DESI_Landmarks.png)
+![Landmark points on DESI Heme B image](images/DESI_Landmarks.png)
 *Matching landmark points placed on the DESI Heme B (616.25 m/z) channel. Points are numbered to correspond with the Xenium landmarks above.*
 
 Landmarks are matched by point number extracted from the exported TSV files, and pixel coordinates are converted to physical micron coordinates (Xenium x 0.2125, DESI x 40.0) to establish a common physical coordinate system.
@@ -66,14 +66,14 @@ Both images are converted to SimpleITK format with correct physical spacing, and
 
 The DESI image is resampled into the Xenium coordinate space using the computed affine transformation via `sitk.Resample`, producing a registered DESI image at Xenium resolution (0.2125 um/pixel). Per-landmark registration errors are computed as Euclidean distances between transformed moving landmarks and fixed landmarks.
 
-![Registered DESI image overlaid on Xenium](Registered_Image_Using_Landmarks.png)
+![Registered DESI image overlaid on Xenium](images/Registered_Image_Using_Landmarks.png)
 *Result of the landmark-based affine registration: the DESI Heme B channel (red) resampled and overlaid onto the Xenium AlphaSMA/Vimentin morphology channel (green) in the same coordinate space. The overlap of tissue boundaries confirms the spatial alignment between the two modalities.*
 
 ## Project Structure
 
 ```
 multimodal_spatial_integration/
-├── notebooks/
+├── code/
 │   ├── DESI_Xenium_Registration.ipynb
 │   └── Xenium_5k_data_analysis_journey_python.ipynb
 ├── data/
@@ -84,8 +84,15 @@ multimodal_spatial_integration/
 │   │   ├── raw/          # DESI OME-TIFF files
 │   │   └── processed/    # Flipped/preprocessed DESI images
 │   ├── proteomics/       # (planned)
-│   └── *.tsv             # Landmark point exports from QuPath
-├── Channels_DESI_Xenium_Test.png
+│   ├── external/         # External reference data
+│   ├── breast.zarr       # Breast cancer SpatialData object
+│   ├── *.tsv             # Landmark point exports from QuPath (DESI + Xenium)
+│   └── *.txt             # Landmark point exports (alternate format)
+├── images/
+│   ├── Channels_DESI_Xenium_Test.png
+│   ├── Xenium_Landmarks.png
+│   ├── DESI_Landmarks.png
+│   └── Registered_Image_Using_Landmarks.png
 ├── requirements.txt
 ├── xenium_scverse_py310.lock.txt
 └── README.md
