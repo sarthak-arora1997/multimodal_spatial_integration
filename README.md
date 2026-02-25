@@ -15,8 +15,8 @@ This project implements a **landmark-based spatial registration pipeline** to al
 
 ### Notebooks
 
-- **`notebooks/Xenium_5k_data_analysis_journey_python.ipynb`**: Single-cell spatial transcriptomics analysis pipeline (QC, clustering, spatial statistics) for lung and breast cancer Xenium datasets
-- **`notebooks/DESI_Xenium_Registration.ipynb`**: Cross-modal registration of DESI and Xenium images (described below)
+- **`code/Xenium_5k_data_analysis_journey_python.ipynb`**: Single-cell spatial transcriptomics analysis pipeline (QC, clustering, spatial statistics) for lung and breast cancer Xenium datasets
+- **`code/DESI_Xenium_Registration.ipynb`**: Cross-modal registration of DESI and Xenium images (original notebook, described below)
 
 ## DESI-Xenium Registration Workflow
 
@@ -74,20 +74,39 @@ The DESI image is resampled into the Xenium coordinate space using the computed 
 ```
 multimodal_spatial_integration/
 ├── code/
-│   ├── DESI_Xenium_Registration.ipynb
-│   └── Xenium_5k_data_analysis_journey_python.ipynb
+│   ├── DESI_Xenium_Registration.ipynb              # Original registration notebook
+│   ├── Xenium_5k_data_analysis_journey_python.ipynb # Xenium analysis notebook
+│   ├── 01_create_spatial_data_object/
+│   │   └── create_sdata.py
+│   ├── 02_channel_extraction/
+│   │   └── extract_channels.py
+│   ├── 03_visualization/
+│   │   └── visualize_channels.py
+│   ├── 04_landmark_selection/
+│   │   └── landmark_selection.ipynb    # Markdown-only (manual QuPath step)
+│   ├── 05_landmark_registration/
+│   │   └── register_landmarks.py
+│   └── 06_apply_registration/
+│       └── apply_transform.py
 ├── data/
-│   ├── xenium/
-│   │   ├── raw/          # Xenium instrument output
-│   │   └── processed/    # Zarr files, clustering results
-│   ├── msi/
-│   │   ├── raw/          # DESI OME-TIFF files
-│   │   └── processed/    # Flipped/preprocessed DESI images
-│   ├── proteomics/       # (planned)
-│   ├── external/         # External reference data
-│   ├── breast.zarr       # Breast cancer SpatialData object
-│   ├── *.tsv             # Landmark point exports from QuPath (DESI + Xenium)
-│   └── *.txt             # Landmark point exports (alternate format)
+│   ├── raw/
+│   │   ├── xenium/       # Xenium instrument output
+│   │   └── msi/          # DESI OME-TIFF files
+│   ├── 01_create_spatial_data_object/
+│   │   └── sdata_object.zarr
+│   ├── 02_channel_extraction/
+│   │   └── desi_flipped.ome.tif
+│   ├── 03_visualization/            # (no data outputs)
+│   ├── 04_landmark_selection/
+│   │   └── *.tsv                    # Landmark exports from QuPath
+│   ├── 05_landmark_registration/
+│   │   └── landmarks.csv
+│   ├── 06_apply_registration/
+│   │   └── desi_registered.tif
+│   ├── xenium/processed/            # Zarr files, clustering results (Xenium notebook)
+│   ├── breast.zarr                  # Breast cancer SpatialData object
+│   ├── proteomics/                  # (planned)
+│   └── external/                    # External reference data
 ├── images/
 │   ├── Channels_DESI_Xenium_Test.png
 │   ├── Xenium_Landmarks.png
@@ -97,6 +116,78 @@ multimodal_spatial_integration/
 ├── xenium_scverse_py310.lock.txt
 └── README.md
 ```
+
+## Pipeline Scripts
+
+The registration workflow from the notebook has been refactored into standalone Python scripts, organized in numbered step folders. Each step folder under `code/` has a corresponding data folder under `data/` with the same name.
+
+### `01_create_spatial_data_object/create_sdata.py`
+
+Loads raw Xenium and DESI data, combines them into a single SpatialData object, and writes it to a Zarr store.
+
+| | |
+|---|---|
+| **Arguments** | None |
+| **Input Data** | `data/raw/xenium/output-XETG00169__0055588__55588_region_4__20250418__182706/` (Xenium instrument output) |
+| | `data/raw/msi/3D_DESI_F5_Pos mode_40um_F5_5pos_40um_Features110425.ome.tif` (DESI 88-channel OME-TIFF) |
+| **Output Data** | `data/01_create_spatial_data_object/sdata_object.zarr` (combined SpatialData with Xenium + DESI) |
+
+### `02_channel_extraction/extract_channels.py`
+
+Reads the combined SpatialData object, extracts biologically relevant Xenium morphology channels at full resolution, flips the DESI image along the x-axis to match Xenium orientation, saves the flipped image (all 88 channels), and creates RGB composite images for visual comparison.
+
+| | |
+|---|---|
+| **Arguments** | None |
+| **Input Data** | `data/01_create_spatial_data_object/sdata_object.zarr` |
+| **Output Data** | `data/02_channel_extraction/desi_flipped.ome.tif` (flipped 88-channel DESI image) |
+
+### `03_visualization/visualize_channels.py`
+
+Opens an interactive napari viewer with Xenium morphology channels and DESI mass spectrometry channels overlaid at their respective physical scales, along with RGB composite images.
+
+| | |
+|---|---|
+| **Arguments** | None |
+| **Input Data** | `data/01_create_spatial_data_object/sdata_object.zarr` |
+| | `data/02_channel_extraction/desi_flipped.ome.tif` |
+| **Output Data** | None (interactive visualization only) |
+
+### `04_landmark_selection/landmark_selection.ipynb`
+
+Markdown-only notebook documenting the manual QuPath workflow for placing corresponding landmark points on the flipped DESI image and the Xenium morphology image. The exported TSV files are saved to the step's data folder.
+
+| | |
+|---|---|
+| **Arguments** | N/A (manual step in QuPath) |
+| **Input Data** | `data/02_channel_extraction/desi_flipped.ome.tif` (opened in QuPath) |
+| | Xenium `morphology_focus_0002.ome.tif` from the raw Xenium output (opened in QuPath) |
+| **Output Data** | `data/04_landmark_selection/morphology_focus_0002.ome.tif-points.tsv` (Xenium landmarks) |
+| | `data/04_landmark_selection/3D_DESI_F5_Pos mode_40um_Flipped.ome.tif - Image0-points.tsv` (DESI landmarks) |
+
+### `05_landmark_registration/register_landmarks.py`
+
+Loads QuPath-exported landmark TSV files, extracts point numbers, converts pixel coordinates to physical micron coordinates, merges matched landmark pairs into a single table, computes a 2D affine transformation using SimpleITK, and evaluates per-landmark registration errors.
+
+| | |
+|---|---|
+| **Arguments** | None |
+| **Input Data** | `data/04_landmark_selection/*.tsv` (landmark exports from QuPath) |
+| | `data/01_create_spatial_data_object/sdata_object.zarr` (for Xenium reference channel) |
+| | `data/02_channel_extraction/desi_flipped.ome.tif` (for DESI reference channel) |
+| **Output Data** | `data/05_landmark_registration/landmarks.csv` (merged landmark table with physical coordinates) |
+
+### `06_apply_registration/apply_transform.py`
+
+Recomputes the affine transformation from the saved landmarks, resamples the DESI image into the Xenium coordinate space using SimpleITK, and saves the registered image as a TIFF file.
+
+| | |
+|---|---|
+| **Arguments** | None |
+| **Input Data** | `data/05_landmark_registration/landmarks.csv` |
+| | `data/01_create_spatial_data_object/sdata_object.zarr` (for Xenium reference image) |
+| | `data/02_channel_extraction/desi_flipped.ome.tif` (for DESI source image) |
+| **Output Data** | `data/06_apply_registration/desi_registered.tif` (DESI resampled to Xenium resolution at 0.2125 um/pixel) |
 
 ## Environment Setup (macOS, Python 3.10)
 
@@ -209,7 +300,7 @@ import polars as pl
 import shutil
 from pathlib import Path
 
-raw_data_path = Path("data/xenium/raw/<your_xenium_output_folder>")
+raw_data_path = Path("data/raw/xenium/<your_xenium_output_folder>")
 
 for fname in ["cells.parquet", "transcripts.parquet"]:
     f = raw_data_path / fname
