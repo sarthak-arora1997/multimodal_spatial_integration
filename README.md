@@ -102,7 +102,7 @@ multimodal_spatial_integration/
 │   ├── 05_landmark_registration/
 │   │   └── landmarks.csv
 │   ├── 06_apply_registration/
-│   │   └── desi_registered.tif
+│   │   └── registered_desi_xenium.ome.tif
 │   ├── xenium/processed/            # Zarr files, clustering results (Xenium notebook)
 │   ├── breast.zarr                  # Breast cancer SpatialData object
 │   ├── proteomics/                  # (planned)
@@ -179,15 +179,15 @@ Loads QuPath-exported landmark TSV files, extracts point numbers, converts pixel
 
 ### `06_apply_registration/apply_transform.py`
 
-Recomputes the affine transformation from the saved landmarks, resamples the DESI image into the Xenium coordinate space using SimpleITK, and saves the registered image as a TIFF file.
+Recomputes the affine transformation from the saved landmarks, resamples all 4 selected DESI channels into the Xenium coordinate space using SimpleITK, stacks them with the Xenium morphology channels (DAPI, ATP1A1/CD45/E-Cadherin, 18S, AlphaSMA/Vimentin), and saves the combined 8-channel image as an OME-TIFF with channel names and physical pixel size metadata.
 
 | | |
 |---|---|
 | **Arguments** | None |
 | **Input Data** | `data/05_landmark_registration/landmarks.csv` |
-| | `data/01_create_spatial_data_object/sdata_object.zarr` (for Xenium reference image) |
-| | `data/02_channel_extraction/desi_flipped.ome.tif` (for DESI source image) |
-| **Output Data** | `data/06_apply_registration/desi_registered.tif` (DESI resampled to Xenium resolution at 0.2125 um/pixel) |
+| | `data/01_create_spatial_data_object/sdata_object.zarr` (for Xenium morphology channels) |
+| | `data/02_channel_extraction/desi_flipped.ome.tif` (for DESI source channels) |
+| **Output Data** | `data/06_apply_registration/registered_desi_xenium.ome.tif` (8-channel OME-TIFF: 4 Xenium + 4 registered DESI, all at 0.2125 um/pixel) |
 
 ## Environment Setup (macOS, Python 3.10)
 
