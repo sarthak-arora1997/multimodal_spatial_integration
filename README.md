@@ -28,27 +28,25 @@ The registration notebook (`DESI_Xenium_Registration.ipynb`) performs the follow
 - Load the 3D DESI OME-TIFF (88 m/z channels, 107 x 102 pixels at 40 um/pixel)
 - Select biologically relevant DESI channels and parse them into a `spatialdata` `Image2DModel` with appropriate scale transforms
 
-### 2. Channel Extraction and Visualization
+### 2. Channel Extraction
 
-Extract matched channel pairs from both modalities for visual comparison and registration:
+The DESI image is flipped along the x-axis to match Xenium orientation and saved (all 88 channels). A 4-channel DESI composite is also created from biologically relevant channels for use in subsequent steps:
 
-- **Xenium**: AlphaSMA/Vimentin (vessels), ATP1A1/CD45/E-Cadherin (membranes), DAPI (nuclei)
-- **DESI**: Heme B 616.25 (vessels), PE/PS 731.65 (membranes), mz 204.13, PE/PS 734.60
+- mz 204.13
+- Heme B 616.25 (vessels)
+- PE/PS 731.65 (membranes)
+- PE/PS 734.60
 
-The DESI image is flipped along the x-axis to match Xenium orientation.
+### 3. Visualization
+
+The Xenium morphology channels and the 4-channel DESI composite are visualized together in napari at their respective physical scales (Xenium at 0.2125 um/pixel, DESI at 40 um/pixel).
 
 ![DESI and Xenium channels visualized in napari](images/Channels_DESI_Xenium_Test.png)
-*Individual DESI mass spectrometry imaging channels (top row from the left: Heme B 616.25, Xenium Morphology (AlphaSMA/Vimentin and ATP1A1/CD45/E-Cadherin), PE/PS 734.60. Bottom row from the left: m/z 204.13, PE/PS 731.65) visualized together in napari. Each channel is rendered with a distinct colormap to highlight tissue morphology across modalities.*
-
-### 3. Composite Image Generation
-
-RGB composite images are created for both modalities using matched biological features:
-- **Red channel**: Vessel markers (AlphaSMA <-> Heme B)
-- **Green channel**: Membrane markers (ATP1A1 <-> Lipid 731.65)
+*Individual DESI mass spectrometry imaging channels and Xenium morphology channels visualized together in napari. Each channel is rendered with a distinct colormap to highlight tissue morphology across modalities.*
 
 ### 4. Landmark Selection
 
-Corresponding landmark points are placed on both images using QuPath and exported as TSV files. A total of 12 landmark pairs were selected across tissue boundaries, vessel structures, and other identifiable features to guide the affine registration.
+Corresponding landmark points are placed on both images using QuPath. Each point is named by assigning it a **class** (e.g., `Xenium_Point_1`, `DESI_Point_1`). To export, click the **Add points/annotations** button and select **Save all**, which produces the TSV files. A total of 12 landmark pairs were selected across tissue boundaries, vessel structures, and other identifiable features to guide the affine registration.
 
 ![Landmark points on Xenium morphology image](images/Xenium_Landmarks.png)
 *Landmark points placed on the Xenium morphology image (AlphaSMA/Vimentin in red, ATP1A1/CD45/E-Cadherin in green) using QuPath. Each colored circle marks a corresponding anatomical feature used for registration.*
@@ -64,10 +62,13 @@ Both images are converted to SimpleITK format with correct physical spacing, and
 
 ### 6. Image Resampling and Overlay
 
-The DESI image is resampled into the Xenium coordinate space using the computed affine transformation via `sitk.Resample`, producing a registered DESI image at Xenium resolution (0.2125 um/pixel). Per-landmark registration errors are computed as Euclidean distances between transformed moving landmarks and fixed landmarks.
+The 4 DESI composite channels are resampled into the Xenium coordinate space using the computed affine transformation via `sitk.Resample`, producing registered DESI channels at Xenium resolution (0.2125 um/pixel). These are stacked with the Xenium morphology channels (DAPI, ATP1A1/CD45/E-Cadherin, 18S, AlphaSMA/Vimentin) into a single multi-channel image and saved as an OME-TIFF.
 
 ![Registered DESI image overlaid on Xenium](images/Registered_Image_Using_Landmarks.png)
 *Result of the landmark-based affine registration: the DESI Heme B channel (red) resampled and overlaid onto the Xenium AlphaSMA/Vimentin morphology channel (green) in the same coordinate space. The overlap of tissue boundaries confirms the spatial alignment between the two modalities.*
+
+![Registered multi-channel image in QuPath](images/Registered_Image_Channels.png)
+*The final registered multi-channel OME-TIFF visualized in QuPath, showing the 4 registered DESI channels and 4 Xenium morphology channels in a single coordinate space.*
 
 ## Project Structure
 
@@ -95,14 +96,15 @@ multimodal_spatial_integration/
 │   ├── 01_create_spatial_data_object/
 │   │   └── sdata_object.zarr
 │   ├── 02_channel_extraction/
-│   │   └── desi_flipped.ome.tif
+│   │   ├── desi_flipped.ome.tif
+│   │   └── desi_composite.ome.tif
 │   ├── 03_visualization/            # (no data outputs)
 │   ├── 04_landmark_selection/
 │   │   └── *.tsv                    # Landmark exports from QuPath
 │   ├── 05_landmark_registration/
 │   │   └── landmarks.csv
 │   ├── 06_apply_registration/
-│   │   └── registered_desi_xenium.ome.tif
+│   │   └── registered_desi.ome.tif
 │   ├── xenium/processed/            # Zarr files, clustering results (Xenium notebook)
 │   ├── breast.zarr                  # Breast cancer SpatialData object
 │   ├── proteomics/                  # (planned)
@@ -111,7 +113,8 @@ multimodal_spatial_integration/
 │   ├── Channels_DESI_Xenium_Test.png
 │   ├── Xenium_Landmarks.png
 │   ├── DESI_Landmarks.png
-│   └── Registered_Image_Using_Landmarks.png
+│   ├── Registered_Image_Using_Landmarks.png
+│   └── Registered_Image_Channels.png
 ├── requirements.txt
 ├── xenium_scverse_py310.lock.txt
 └── README.md
@@ -134,23 +137,24 @@ Loads raw Xenium and DESI data, combines them into a single SpatialData object, 
 
 ### `02_channel_extraction/extract_channels.py`
 
-Reads the combined SpatialData object, extracts biologically relevant Xenium morphology channels at full resolution, flips the DESI image along the x-axis to match Xenium orientation, saves the flipped image (all 88 channels), and creates RGB composite images for visual comparison.
+Reads the combined SpatialData object, flips the DESI image along the x-axis to match Xenium orientation, saves the flipped image (all 88 channels), and creates a 4-channel DESI composite from selected biologically relevant channels.
 
 | | |
 |---|---|
 | **Arguments** | None |
 | **Input Data** | `data/01_create_spatial_data_object/sdata_object.zarr` |
 | **Output Data** | `data/02_channel_extraction/desi_flipped.ome.tif` (flipped 88-channel DESI image) |
+| | `data/02_channel_extraction/desi_composite.ome.tif` (4-channel DESI composite) |
 
 ### `03_visualization/visualize_channels.py`
 
-Opens an interactive napari viewer with Xenium morphology channels and DESI mass spectrometry channels overlaid at their respective physical scales, along with RGB composite images.
+Opens an interactive napari viewer with Xenium morphology channels and the 4-channel DESI composite overlaid at their respective physical scales.
 
 | | |
 |---|---|
 | **Arguments** | None |
 | **Input Data** | `data/01_create_spatial_data_object/sdata_object.zarr` |
-| | `data/02_channel_extraction/desi_flipped.ome.tif` |
+| | `data/02_channel_extraction/desi_composite.ome.tif` |
 | **Output Data** | None (interactive visualization only) |
 
 ### `04_landmark_selection/landmark_selection.ipynb`
@@ -174,20 +178,20 @@ Loads QuPath-exported landmark TSV files, extracts point numbers, converts pixel
 | **Arguments** | None |
 | **Input Data** | `data/04_landmark_selection/*.tsv` (landmark exports from QuPath) |
 | | `data/01_create_spatial_data_object/sdata_object.zarr` (for Xenium reference channel) |
-| | `data/02_channel_extraction/desi_flipped.ome.tif` (for DESI reference channel) |
+| | `data/02_channel_extraction/desi_composite.ome.tif` (for DESI reference channel) |
 | **Output Data** | `data/05_landmark_registration/landmarks.csv` (merged landmark table with physical coordinates) |
 
 ### `06_apply_registration/apply_transform.py`
 
-Recomputes the affine transformation from the saved landmarks, resamples all 4 selected DESI channels into the Xenium coordinate space using SimpleITK, stacks them with the Xenium morphology channels (DAPI, ATP1A1/CD45/E-Cadherin, 18S, AlphaSMA/Vimentin), and saves the combined 8-channel image as an OME-TIFF with channel names and physical pixel size metadata.
+Recomputes the affine transformation from the saved landmarks, resamples the 4 DESI composite channels into the Xenium coordinate space using SimpleITK, stacks them with the Xenium morphology channels (DAPI, ATP1A1/CD45/E-Cadherin, 18S, AlphaSMA/Vimentin), and saves the combined 8-channel image as an OME-TIFF.
 
 | | |
 |---|---|
 | **Arguments** | None |
 | **Input Data** | `data/05_landmark_registration/landmarks.csv` |
 | | `data/01_create_spatial_data_object/sdata_object.zarr` (for Xenium morphology channels) |
-| | `data/02_channel_extraction/desi_flipped.ome.tif` (for DESI source channels) |
-| **Output Data** | `data/06_apply_registration/registered_desi_xenium.ome.tif` (8-channel OME-TIFF: 4 Xenium + 4 registered DESI, all at 0.2125 um/pixel) |
+| | `data/02_channel_extraction/desi_composite.ome.tif` (for DESI source channels) |
+| **Output Data** | `data/06_apply_registration/registered_desi.ome.tif` (8-channel OME-TIFF: 4 registered DESI + 4 Xenium, all at 0.2125 um/pixel) |
 
 ## Environment Setup (macOS, Python 3.10)
 

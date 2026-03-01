@@ -26,7 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
 
 INPUT_ZARR = DATA_DIR / "01_create_spatial_data_object" / "sdata_object.zarr"
-INPUT_DESI_FLIPPED = DATA_DIR / "02_channel_extraction" / "desi_flipped.ome.tif"
+INPUT_DESI_COMPOSITE = DATA_DIR / "02_channel_extraction" / "desi_composite.ome.tif"
 
 XENIUM_LANDMARKS_TSV = DATA_DIR / "04_landmark_selection" / "morphology_focus_0002.ome.tif-points.tsv"
 DESI_LANDMARKS_TSV = DATA_DIR / "04_landmark_selection" / "3D_DESI_F5_Pos mode_40um_Flipped.ome.tif - Image0-points.tsv"
@@ -36,10 +36,6 @@ OUTPUT_LANDMARKS_CSV = DATA_DIR / "05_landmark_registration" / "landmarks.csv"
 # Physical pixel sizes (microns per pixel)
 XENIUM_PIXEL_SIZE = 0.2125
 DESI_PIXEL_SIZE = 40.0
-
-# DESI channel index for vessel reference (Heme B)
-DESI_HEME_B_INDEX = 17
-
 
 def main():
     # 1. Load landmark TSV files
@@ -83,8 +79,11 @@ def main():
     morph_array = sdata.images["morphology_focus"]["scale0"].to_dataset()["image"]
     alphasma_vim = morph_array.sel(c="AlphaSMA/Vimentin").values
 
-    desi_flipped = tifffile.imread(INPUT_DESI_FLIPPED)
-    heme_b = desi_flipped[DESI_HEME_B_INDEX]
+    desi_composite = tifffile.imread(INPUT_DESI_COMPOSITE)  # (4, Y, X)
+    heme_b = desi_composite[1]  # index 1 = heme_B_616.25 (second selected channel)
+
+    print(f"  Xenium (AlphaSMA/Vimentin): shape={alphasma_vim.shape}, dtype={alphasma_vim.dtype}")
+    print(f"  DESI (Heme B):              shape={heme_b.shape}, dtype={heme_b.dtype}")
 
     # 6. Convert to SimpleITK images
     xenium_sitk = sitk.GetImageFromArray(alphasma_vim)
@@ -95,8 +94,8 @@ def main():
     desi_sitk.SetSpacing([DESI_PIXEL_SIZE, DESI_PIXEL_SIZE])
     desi_sitk.SetOrigin([0.0, 0.0])
 
-    print(f"  Xenium SimpleITK: size={xenium_sitk.GetSize()}, spacing={xenium_sitk.GetSpacing()}")
-    print(f"  DESI SimpleITK:   size={desi_sitk.GetSize()}, spacing={desi_sitk.GetSpacing()}")
+    print(f"  Xenium SimpleITK: size={xenium_sitk.GetSize()}, spacing={xenium_sitk.GetSpacing()}, pixel type={xenium_sitk.GetPixelIDTypeAsString()}")
+    print(f"  DESI SimpleITK:   size={desi_sitk.GetSize()}, spacing={desi_sitk.GetSpacing()}, pixel type={desi_sitk.GetPixelIDTypeAsString()}")
 
     # 7. Prepare landmark coordinates (flat list for SimpleITK)
     fixed_landmarks = [[float(r.x_microns_xenium), float(r.y_microns_xenium)] for _, r in landmarks_df.iterrows()]
